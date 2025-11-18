@@ -154,7 +154,8 @@ hr {
   border: none;
   height: 1px;
   background: rgba(255, 255, 255, 0.04);
-  margin: 1.5rem 0;
+  margin: 1px;
+  padding: 0;
 }
 
 /* Lists */
@@ -179,6 +180,14 @@ th, td {
 th {
   background: rgba(180, 150, 255, 0.04);
   color: #EDE9FF;
+}
+
+footer {
+  text-align: right;
+}
+
+nav {
+  text-align: center;
 }
 
 /* Images */

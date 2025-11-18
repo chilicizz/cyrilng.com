@@ -8,11 +8,13 @@
   </head>
   <body>
     {% include navigation.html %}
-    <section>
+    <hr/>
+    <section class="container">
       {{ content }}
     </section>
-    <footer>
-      Cyril Ng Lung Kit {{ "now" | date: "%Y" }}.
+    <hr/>
+    <footer class="container">
+      Cyril Ng Lung Kit ({{ "now" | date: "%Y" }})
     </footer>
   </body>
 </html>
