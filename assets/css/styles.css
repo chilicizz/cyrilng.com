@@ -1,0 +1,211 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: #0f1013;
+  color: #EDE9FF;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Layout utilities */
+.container {
+  width: 100%;
+  max-width: 880px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  color: #EDE9FF;
+  margin-top: 0;
+  margin-bottom: 0.6rem;
+  line-height: 1.15;
+}
+
+h1 {
+  font-size: 2.25rem;
+}
+
+h2 {
+  font-size: 1.75rem;
+}
+
+h3 {
+  font-size: 1.375rem;
+}
+
+h4 {
+  font-size: 1.125rem;
+}
+
+h5 {
+  font-size: 1rem;
+}
+
+h6 {
+  font-size: 0.95rem;
+}
+
+p {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #BFB7E6;
+}
+
+/* Links */
+a {
+  color: #B497FF;
+  text-decoration: none;
+  transition: color 120ms ease, text-decoration-color 120ms ease;
+}
+a:hover, a:focus {
+  color: rgb(144.8653846154, 102.28, 255);
+  text-decoration: underline;
+  outline: none;
+}
+
+/* Current / nav state */
+.current {
+  font-weight: 600;
+  color: #B497FF;
+}
+
+/* Buttons */
+button,
+.btn {
+  display: inline-block;
+  font: inherit;
+  padding: 0.5rem 0.9rem;
+  border-radius: 6px;
+  border: none;
+  background: linear-gradient(180deg, #B497FF, rgb(144.8653846154, 102.28, 255));
+  color: rgb(31.6992307692, 0, 113.68);
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(10, 8, 30, 0.45);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+button:hover,
+.btn:hover {
+  transform: translateY(-1px);
+}
+button:focus,
+.btn:focus {
+  box-shadow: 0 0 0 3px rgba(180, 150, 255, 0.14);
+  outline: none;
+}
+
+/* Form controls */
+input, textarea, select {
+  background: #15151a;
+  color: #EDE9FF;
+  border: 1px solid rgb(41.6872340426, 41.6872340426, 51.6127659574);
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(180, 150, 255, 0.12);
+}
+
+/* Code and preformatted */
+code, kbd, .kbd, samp {
+  background: rgba(255, 255, 255, 0.03);
+  color: #BFB7E6;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
+  font-size: 0.92em;
+}
+
+pre {
+  background: #0b0b0e;
+  color: #BFB7E6;
+  padding: 1rem;
+  overflow: auto;
+  border-radius: 8px;
+  margin: 0 0 1rem 0;
+}
+
+/* Blockquote */
+blockquote {
+  border-left: 4px solid rgb(156.5769230769, 118.52, 255);
+  padding-left: 1rem;
+  margin: 0 0 1rem 0;
+  color: #BFB7E6;
+}
+
+/* Horizontal rule */
+hr {
+  border: none;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.04);
+  margin: 1.5rem 0;
+}
+
+/* Lists */
+ul, ol {
+  margin: 0 0 1rem 1.25rem;
+  color: #BFB7E6;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+th, td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  text-align: left;
+}
+
+th {
+  background: rgba(180, 150, 255, 0.04);
+  color: #EDE9FF;
+}
+
+/* Images */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Small helpers */
+.muted {
+  color: #BFB7E6;
+}
+
+.lead {
+  color: #EDE9FF;
+  font-size: 1.15rem;
+}
+
+/* Responsive tweaks */
+@media (max-width: 640px) {
+  h1 {
+    font-size: 1.6rem;
+  }
+  .container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+/* End of theme */
