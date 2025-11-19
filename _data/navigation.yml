@@ -2,8 +2,6 @@
   link: /
 - name: About
   link: /about.html
-- name: Dashboard
-  link: https://app.cyrilng.com
 - name: Github
   link: https://github.com/chilicizz
 - name: LinkedIn
