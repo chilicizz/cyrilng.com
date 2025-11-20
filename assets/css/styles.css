@@ -16,6 +16,20 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  position: relative;
+  min-height: 100vh;
+}
+
+.content-wrap { /* Wrapper for all content except the footer */
+  padding-bottom: 10rem;
+}
+
+footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 10rem;
+  background: #0f1013;
 }
 
 /* Layout utilities */

@@ -32,10 +32,15 @@ function addToMarquee(text) {
     var marquee = document.getElementById("main_marquee");
     marquee.innerHTML = ""
 
+    var link = document.createElement("a");
+    link.href = "https://www.hko.gov.hk/en/wxinfo/dailywx/wxwarntoday.htm";
+    
     var div = document.createElement("div");
     div.className = "marquee_text";
     div.textContent = text || "";
-    marquee.appendChild(div);
+
+    link.appendChild(div);
+    marquee.appendChild(link);
 }
 
 const WARNING_DESCRIPTION_MAP = {
