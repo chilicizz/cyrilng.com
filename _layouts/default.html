@@ -15,7 +15,16 @@
     </section>
     <hr/>
     <footer class="container">
+      <div id="main_marquee" class="marquee"></div>
       Cyril Ng Lung Kit ({{ "now" | date: "%Y" }})
     </footer>
+    <script src="/assets/js/spark_hko.js"></script> 
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        console.log("Page loaded");
+        
+        subscribeToHkoWarnings(addToMarquee);
+      });
+    </script>
   </body>
 </html>
