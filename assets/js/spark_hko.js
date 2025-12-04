@@ -8,27 +8,49 @@ function subscribeToHkoWarnings(eventHandlerFunction) {
     const evtSource = new EventSource(sparkBaseUrl + "/hko/warnings/stream");
     evtSource.onmessage = (event) => {
         const warnings = JSON.parse(event.data);
+        //console.log("Received HKO warnings:", warnings);
         const responseArray = [];
-        warnings.details.forEach(element => {
-            var description;
-            if (Object.hasOwn(element, "subtype")) {
-                description = WARNING_DESCRIPTION_MAP[element["subtype"]];
-            } else {
-                description = WARNING_DESCRIPTION_MAP[element["warningStatementCode"]];
-            }
-            // console.log(JSON.stringify(element));
-            responseArray.push(description);
-        });
-        eventHandlerFunction("HKO: " + responseArray.join(" | "));
+        if (!warnings.hasOwnProperty("details")) {
+            eventHandlerFunction(["no active weather warnings"]);
+            return;
+        } else {
+            warnings.details.forEach(element => {
+                var description;
+                if (Object.hasOwn(element, "subtype")) {
+                    description = WARNING_DESCRIPTION_MAP[element["subtype"]];
+                } else {
+                    description = WARNING_DESCRIPTION_MAP[element["warningStatementCode"]];
+                }
+                // console.log(JSON.stringify(element));
+                responseArray.push(description);
+            });
+            eventHandlerFunction(responseArray);
+        }
     };
     evtSource.onerror = (err) => {
-        console.error("EventSource failed:", err);
+        console.error("Failed to connect to stream: ", err);
+        eventHandlerFunction(["link weather warnings"]);
     };
     return evtSource;
 };
 
+function concatenateHkoWarnings(warnings) {
+    return "HKO: " + warnings.join(" | ");
+}
+
+function createList(warnings) {
+    var warning_list = document.getElementById("hko_warnings");
+    warning_list.innerHTML = "";
+
+    var link = document.createElement("a");
+    link.href = "https://www.hko.gov.hk/en/wxinfo/dailywx/wxwarntoday.htm";
+    link.textContent = concatenateHkoWarnings(warnings);
+    
+    warning_list.appendChild(link);
+}
+
 function addToMarquee(text) {
-    console.log("addToMarquee: " + text);
+    //console.log("addToMarquee: " + text);
     var marquee = document.getElementById("main_marquee");
     marquee.innerHTML = ""
 

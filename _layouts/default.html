@@ -15,16 +15,17 @@
     </section>
     <hr/>
     <footer class="container">
-      <div id="main_marquee" class="marquee"></div>
+      <div id="hko_warnings"></div>
+      <!-- <div id="main_marquee" class="marquee"></div> -->
       Cyril Ng Lung Kit ({{ "now" | date: "%Y" }}) | 
       <a href="/policy.html" >Privacy Policy</a>
     </footer>
     <script src="/assets/js/spark_hko.js"></script> 
     <script>
       document.addEventListener("DOMContentLoaded", () => {
-        console.log("Page loaded");
-        
-        subscribeToHkoWarnings(addToMarquee);
+        console.log("DOMContentLoaded");
+        // subscribeToHkoWarnings((entries) => {addToMarquee(concatenateHkoWarnings(entries))});
+        subscribeToHkoWarnings(createList);
       });
     </script>
   </body>
