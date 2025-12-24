@@ -45,7 +45,7 @@ function createList(warnings) {
     var link = document.createElement("a");
     link.href = "https://www.hko.gov.hk/en/wxinfo/dailywx/wxwarntoday.htm";
     link.textContent = concatenateHkoWarnings(warnings);
-    
+    link.title = "Hong Kong Observatory Weather Warnings";
     warning_list.appendChild(link);
 }
 
@@ -91,3 +91,33 @@ const WARNING_DESCRIPTION_MAP = {
   "WTMW"    :   "Tsunami Warning",
   "WTS"     :   "Thunderstorm Warning",
 };
+
+/**
+ * Fetch AQI data for a given latitude and longitude and return via callback.
+ * @param {number|string} latitude
+ * @param {number|string} longitude
+ * @param {function} callback - function(data, err)
+ */
+function getAQIByLocation(latitude, longitude, callback) {
+    try {
+        const url = sparkBaseUrl + "/aqi/location/" + encodeURIComponent(latitude) + "/" + encodeURIComponent(longitude);
+        fetch(url, { method: 'GET', credentials: 'same-origin' })
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.status);
+                }
+                return response.json();
+            })
+            .then((data) => {
+                callback(data);
+            })
+            .catch((err) => {
+                console.error('getAQIByLocation error:', err);
+                callback(null, err);
+            });
+    } catch (err) {
+        console.error('getAQIByLocation unexpected error:', err);
+        callback(null, err);
+    }
+}
+
