@@ -10,10 +10,12 @@
   <body>
     {% include navigation.html %}
     <hr/>
+    <!-- main content -->
     <section class="container">
       {{ content }}
     </section>
     <hr/>
+    <!-- information -->
     <section class="container">
       <div id="hko_warnings"></div>
       <div id="aqi_info"></div>
@@ -25,34 +27,29 @@
       <a href="/policy.html" >Privacy Policy</a>
     </footer>
 
+    <!-- Scripts -->
     <script src="/assets/js/spark_hko.js"></script> 
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         console.log("DOMContentLoaded");
         // subscribeToHkoWarnings((entries) => {addToMarquee(concatenateHkoWarnings(entries))});
         subscribeToHkoWarnings(createList);
+
+        // get AQI 
         navigator.geolocation.getCurrentPosition((position) => {
-          getAQIByLocation(position.coords.latitude, position.coords.longitude, (data, err) => {
-            if (err || data?.status != "ok") {
+          getAQIByLocation(position.coords.latitude, position.coords.longitude, (aqi_payload, err) => {
+            if (err || aqi_payload?.status != "ok") {
               console.log("Error fetching data for AQI: ", err);
             } else {
               //console.log(data);
+              console.log(`lat: ${position.coords.latitude}, long: ${position.coords.longitude}`)
               var aqi_info = document.getElementById("aqi_info");
               aqi_info.innerHTML = "";
-
-              var link = document.createElement("a");
-              link.href = data.data?.city?.url;
-              link.textContent = data.data?.city?.name + ": " + data.data?.aqi + " AQI";
-              link.title =  data.data?.iaqi?.pm25?.v + " pm2.5\n" + 
-                            data.data?.iaqi?.pm10?.v + " pm10\n" + 
-                            data.data?.iaqi?.o3?.v + " ozone\n" + 
-                            data.data?.iaqi?.t?.v + " °C\n" + 
-                            data.data?.iaqi?.h?.v + " % humidity\n" + 
-                            data.data?.iaqi?.p?.v + " bar";
-              aqi_info.appendChild(link);
-            }
+              aqi_info.appendChild(createAnchorElement(aqi_payload));
+            };
           });
         });
+        // 
       });
     </script>
   </body>

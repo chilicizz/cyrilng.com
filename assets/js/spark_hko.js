@@ -56,7 +56,7 @@ function addToMarquee(text) {
 
     var link = document.createElement("a");
     link.href = "https://www.hko.gov.hk/en/wxinfo/dailywx/wxwarntoday.htm";
-    
+
     var div = document.createElement("div");
     div.className = "marquee_text";
     div.textContent = text || "";
@@ -66,30 +66,30 @@ function addToMarquee(text) {
 }
 
 const WARNING_DESCRIPTION_MAP = {
-  "WFIREY"  :   "Yellow Fire Danger Warning",
-  "WFIRER"  :   "Red Fire Danger Warning",
-  "WRAINA"  :   "Amber Rainstorm Warning",
-  "WRAINR"  :   "Red Rainstorm Warning",
-  "WRAINB"  :   "Black Rainstorm Warning",
-  "TC1"     :   "Standby Signal No.1",
-  "TC3"     :   "Strong Wind Signal No.3",
-  "WTCPRE8" :   "Pre-8 Tropical Cyclone Special Announcement",
-  "TC8NE"   :   "No.8 North East Gale or Storm",
-  "TC8SE"   :   "No.8 South East Gale or Storm",
-  "TC8SW"   :   "No.8 South West Gale or Storm",
-  "TC8NW"   :   "No.8 North West Gale or Storm",
-  "TC9"     :   "Increasing Gale or Storm No.9",
-  "TC10"    :   "Hurricane Signal No.10",
-  "WTCSGNL" :   "Tropical Cyclone Signals Cancelled",
-  "CANCEL"  :   "All Signals Cancelled",
-  "WFROST"  :   "Frost Warning",
-  "WHOT"    :   "Very Hot Weather Warning",
-  "WCOLD"   :   "Cold Weather Warning",
-  "WMSGNL"  :   "Strong Monsoon",
-  "WFNTSA"  :   "Flooding in the Northern New Territories",
-  "WL"      :   "Landslip Warning",
-  "WTMW"    :   "Tsunami Warning",
-  "WTS"     :   "Thunderstorm Warning",
+    "WFIREY": "Yellow Fire Danger Warning",
+    "WFIRER": "Red Fire Danger Warning",
+    "WRAINA": "Amber Rainstorm Warning",
+    "WRAINR": "Red Rainstorm Warning",
+    "WRAINB": "Black Rainstorm Warning",
+    "TC1": "Standby Signal No.1",
+    "TC3": "Strong Wind Signal No.3",
+    "WTCPRE8": "Pre-8 Tropical Cyclone Special Announcement",
+    "TC8NE": "No.8 North East Gale or Storm",
+    "TC8SE": "No.8 South East Gale or Storm",
+    "TC8SW": "No.8 South West Gale or Storm",
+    "TC8NW": "No.8 North West Gale or Storm",
+    "TC9": "Increasing Gale or Storm No.9",
+    "TC10": "Hurricane Signal No.10",
+    "WTCSGNL": "Tropical Cyclone Signals Cancelled",
+    "CANCEL": "All Signals Cancelled",
+    "WFROST": "Frost Warning",
+    "WHOT": "Very Hot Weather Warning",
+    "WCOLD": "Cold Weather Warning",
+    "WMSGNL": "Strong Monsoon",
+    "WFNTSA": "Flooding in the Northern New Territories",
+    "WL": "Landslip Warning",
+    "WTMW": "Tsunami Warning",
+    "WTS": "Thunderstorm Warning",
 };
 
 /**
@@ -121,3 +121,15 @@ function getAQIByLocation(latitude, longitude, callback) {
     }
 }
 
+function createAnchorElement(aqi_payload) {
+    var link = document.createElement("a");
+    link.href = aqi_payload.data?.city?.url;
+    link.textContent = aqi_payload.data?.city?.name + ": " + aqi_payload.data?.aqi + " AQI";
+    link.title = aqi_payload.data?.iaqi?.pm25?.v + " pm2.5\n" +
+        aqi_payload.data?.iaqi?.pm10?.v + " pm10\n" +
+        aqi_payload.data?.iaqi?.o3?.v + " ozone\n" +
+        aqi_payload.data?.iaqi?.t?.v + " °C\n" +
+        aqi_payload.data?.iaqi?.h?.v + " % humidity\n" +
+        aqi_payload.data?.iaqi?.p?.v + " bar";
+    return link;
+}
