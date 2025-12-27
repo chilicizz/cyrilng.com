@@ -1,56 +1,59 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>{{ page.title }}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="icon" type="image/png" href="assets/favicon.png"/>
-  </head>
-  <body>
-    {% include navigation.html %}
-    <hr/>
-    <!-- main content -->
-    <section class="container">
-      {{ content }}
-    </section>
-    <hr/>
-    <!-- information -->
-    <section class="container">
-      <div id="hko_warnings"></div>
-      <div id="aqi_info"></div>
-      <!-- <div id="main_marquee" class="marquee"></div> -->
-    </section>
-    <hr/>
-    <footer class="container">
-      Cyril Ng Lung Kit ({{ "now" | date: "%Y" }}) | 
-      <a href="/policy.html" >Privacy Policy</a>
-    </footer>
 
-    <!-- Scripts -->
-    <script src="/assets/js/spark_hko.js"></script> 
-    <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        console.log("DOMContentLoaded");
-        // subscribeToHkoWarnings((entries) => {addToMarquee(concatenateHkoWarnings(entries))});
-        subscribeToHkoWarnings(createList);
+<head>
+  <meta charset="utf-8">
+  <title>{{ page.title }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png" />
+</head>
 
-        // get AQI 
-        navigator.geolocation.getCurrentPosition((position) => {
-          getAQIByLocation(position.coords.latitude, position.coords.longitude, (aqi_payload, err) => {
-            if (err || aqi_payload?.status != "ok") {
-              console.log("Error fetching data for AQI: ", err);
-            } else {
-              //console.log(data);
-              console.log(`lat: ${position.coords.latitude}, long: ${position.coords.longitude}`)
-              var aqi_info = document.getElementById("aqi_info");
-              aqi_info.innerHTML = "";
-              aqi_info.appendChild(createAnchorElement(aqi_payload));
-            };
-          });
+<body>
+  {% include navigation.html %}
+  <hr />
+  <!-- main content -->
+  <section class="container">
+    {{ content }}
+  </section>
+  <hr />
+  <!-- information -->
+  <section class="container">
+    <div id="hko_warnings"></div>
+    <div id="aqi_info"></div>
+    <!-- <div id="main_marquee" class="marquee"></div> -->
+  </section>
+  <hr />
+  <footer class="container">
+    Cyril Ng Lung Kit ({{ "now" | date: "%Y" }}) |
+    <a href="/policy.html">Privacy Policy</a>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/assets/js/spark_hko.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      console.log("DOMContentLoaded");
+      // subscribeToHkoWarnings((entries) => {addToMarquee(concatenateHkoWarnings(entries))});
+      subscribeToHkoWarnings(createList);
+
+      // get AQI 
+      navigator.geolocation.getCurrentPosition((position) => {
+        getAQIByLocation(position.coords.latitude, position.coords.longitude, (aqi_payload, err) => {
+          if (err || aqi_payload?.status != "ok") {
+            console.log("Error fetching data for AQI: ", err);
+          } else {
+            //console.log(data);
+            console.log(`lat: ${position.coords.latitude}, long: ${position.coords.longitude}`);
+            var aqi_info = document.getElementById("aqi_info");
+            aqi_info.innerHTML = "";
+            aqi_info.appendChild(createAnchorElement(aqi_payload));
+          };
         });
-        // 
       });
-    </script>
-  </body>
+      // 
+    });
+  </script>
+</body>
+
 </html>
