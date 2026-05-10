@@ -67,9 +67,10 @@ title: Typhoon Track
   }
 
   function getCurrentStatus(typhoon) {
-    if (typhoon.track) {
-      return typhoon.track.filter(point => point.timePeriod === "CURRENT")[0]
+    if (typhoon.points) {
+      return typhoon.points.find(point => point.timePeriod === "CURRENT");
     }
+    return null;
   }
 
   function deg2rad(deg) {
