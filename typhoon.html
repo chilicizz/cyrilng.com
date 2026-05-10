@@ -91,7 +91,7 @@ title: Typhoon Track
     const lines = typhoons.map(typhoon => {
       const current = getCurrentStatus(typhoon);
       let distanceText = '';
-      if (userLat !== undefined && userLng !== undefined && current?.lat !== undefined && current?.lng !== undefined) {
+      if (userLat !== undefined && userLng !== undefined && current?.latitude !== undefined && current?.longitude !== undefined) {
         const dist = getDistance(userLat, userLng, parseCoordinate(current.latitude), parseCoordinate(current.longitude));
         distanceText = ` · Distance: ${dist.toFixed(0)} km`;
       }
