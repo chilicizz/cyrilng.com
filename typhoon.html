@@ -105,8 +105,8 @@ title: Typhoon Track
       const nearestPointText = `Nearest approach: ${nearestPoint?.dist?.toFixed(0)} km`;
       return `
       <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #ddd;">
-        <div><strong style="color: ${typhoon.color};">● ${current?.intensity} ${typhoon.tropicalCycloneName}</strong></div>
-        <div style="font-size: 0.9rem; margin-bottom: 0.5rem;">${typhoon.bulletinTime} · Maximum wind speed: ${current?.maximumWind} · (${current?.latitude} ${current?.longitude})</div>
+        <div><strong style="color: ${typhoon.color};">● ${currentPoint?.intensity} ${typhoon.tropicalCycloneName}</strong></div>
+        <div style="font-size: 0.9rem; margin-bottom: 0.5rem;">${typhoon.bulletinTime} · Maximum wind speed: ${currentPoint?.maximumWind} · (${currentPoint?.latitude} ${currentPoint?.longitude})</div>
         <div style="font-size: 0.85rem;">${distanceText}</div>
         <div style="font-size: 0.85rem;">${nearestPointText}</div>
       </div>
