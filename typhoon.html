@@ -88,19 +88,17 @@ title: Typhoon Track
     return d;
   }
 
+  function getNearestPoint(typhoon) {
+    if (typhoon.points && typhoon.points.length > 0) {
+      return typhoon.points.reduce((min, point) => point.dist < min.dist ? point : min);
+    }
+    return null;
+  }
+  
   function createStatusHtml(typhoons) {
     const lines = typhoons.map(typhoon => {
-      let currentPoint, nearestPoint;
-      typhoon.track.forEach(point => {
-        if (typeof nearestPoint === "undefined") {
-          nearestPoint = point;
-        } else if (nearestPoint.dist > point.dist){
-          nearestPoint = point;
-        }
-        if (point.timePeriod === "CURRENT") {
-          currentPoint = point;
-        }
-      });
+      const currentPoint = getCurrentStatus(typhoon);
+      const nearestPoint = getNearestPoint(typhoon);
       const distanceText = `Current distance from HK: ${currentPoint?.dist.toFixed(0)} km`;
       const nearestPointText = `Nearest approach: ${nearestPoint?.dist.toFixed(0)} km`;
       return `
@@ -222,7 +220,7 @@ title: Typhoon Track
             };
           }).filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
           
-          console.log(JSON.stringify(points));
+          //console.log(JSON.stringify(points));
 
           typhoonDataList.push({
             ...trackData,
