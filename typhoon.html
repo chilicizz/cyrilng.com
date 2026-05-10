@@ -30,28 +30,23 @@ title: Typhoon Track
   }
 
   .typhoon-label {
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid #333;
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-size: 12px;
+    font-size: 1rem;
     font-weight: bold;
     color: #333;
-    text-align: center;
-    white-space: nowrap;
   }
 </style>
 
 <h1>Typhoon Track</h1>
 <p></p>
-<div id="typhoon_status" class="typhoon-panel">Loading typhoon information…</div>
-<div id="typhoon_map"></div>
 <div id="typhoon_points" class="typhoon-panel"></div>
+<div id="typhoon_map"></div>
+<div id="typhoon_status" class="typhoon-panel">Loading typhoon information…</div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-  const hkCoordinates = {lat: 22.3193, lng: 114.1694};
-  const typhoonApiHost = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '' : 'https://spark.cyrilng.com';
+  const retryTimes = 1;
+  const hkCoordinates = { lat: 22.3193, lng: 114.1694 };
+  const typhoonApiHost = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:8080' : 'https://spark.cyrilng.com';
   const typhoonListUrl = typhoonApiHost + '/typhoon-json/list';
   const trackContainer = document.getElementById('typhoon_points');
   const statusContainer = document.getElementById('typhoon_status');
@@ -95,7 +90,7 @@ title: Typhoon Track
     }
     return null;
   }
-  
+
   function createStatusHtml(typhoons) {
     const lines = typhoons.map(typhoon => {
       const currentPoint = getCurrentStatus(typhoon);
@@ -103,13 +98,13 @@ title: Typhoon Track
       console.log(JSON.stringify(currentPoint));
       console.log(JSON.stringify(nearestPoint));
       const distanceText = `Current distance from HK: ${currentPoint?.dist?.toFixed(0)} km`;
-      const nearestPointText = `Nearest approach: ${nearestPoint?.dist?.toFixed(0)} km`;
+      const nearestText = `Nearest approach to HK: ${nearestPoint?.dist?.toFixed(0)} km ${nearestPoint?.time ?? ""}`;
       return `
       <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #ddd;">
         <div><strong style="color: ${typhoon.color};">● ${currentPoint?.intensity} ${typhoon.tropicalCycloneName}</strong></div>
-        <div style="font-size: 0.9rem; margin-bottom: 0.5rem;">${typhoon.bulletinTime} · Maximum wind speed: ${currentPoint?.maximumWind} · (${currentPoint?.latitude} ${currentPoint?.longitude})</div>
+        <div style="font-size: 0.9rem;">${typhoon.bulletinTime} · Maximum wind speed: ${currentPoint?.maximumWind} · (${currentPoint?.latitude} ${currentPoint?.longitude})</div>
         <div style="font-size: 0.85rem;">${distanceText}</div>
-        <div style="font-size: 0.85rem;">${nearestPointText}</div>
+        <div style="font-size: 0.85rem;">${nearestText}</div>
       </div>
     `;
     }).join('');
@@ -120,7 +115,8 @@ title: Typhoon Track
     const map = L.map('typhoon_map', { zoomControl: true });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
-      maxZoom: 18,
+      maxZoom: 10,
+      minZoom: 4
     }).addTo(map);
 
     let allBounds = [];
@@ -174,14 +170,25 @@ title: Typhoon Track
             icon: L.divIcon({
               html: typhoon.tropicalCycloneName,
               className: 'typhoon-label',
-              iconSize: [100, 20],
-              iconAnchor: [50, -20]
+              iconAnchor: [30, -20]
             })
           }).addTo(map);
         }
+
       });
     });
-
+    const HK = L.circleMarker([hkCoordinates.lat, hkCoordinates.lng], {
+      radius: 5,
+      fillColor: '#000',
+      color: '#333',
+      weight: 1,
+      fillOpacity: 0.8,
+    }).addTo(map).bindPopup(`
+        <strong>Hong Kong</strong><br>
+        (${hkCoordinates.lat}, ${hkCoordinates.lng})
+      `);
+    allBounds.concat([hkCoordinates.lat, hkCoordinates.lng]);
+    // center the map
     if (allBounds.length > 0) {
       const bounds = L.latLngBounds(allBounds);
       map.fitBounds(bounds.pad(0.45));
@@ -218,11 +225,11 @@ title: Typhoon Track
             return {
               ...point,
               lat: lat,
-              lng : lng,
+              lng: lng,
               dist: dist
             };
           }).filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
-          
+
           //console.log(JSON.stringify(points));
 
           typhoonDataList.push({
@@ -240,12 +247,13 @@ title: Typhoon Track
         return;
       }
 
-      statusContainer.innerHTML = `<div><strong>Tracking ${typhoonDataList.length} active typhoon${typhoonDataList.length !== 1 ? 's' : ''}</strong></div>`;
+      statusContainer.innerHTML = `<div>Tracking ${typhoonDataList.length} active typhoon${typhoonDataList.length !== 1 ? 's' : ''}</div>`;
       trackContainer.innerHTML = createStatusHtml(typhoonDataList);
       renderMap(typhoonDataList);
     } catch (error) {
       console.error(error);
       statusContainer.innerHTML = `<span style="color: #a00;">Unable to load typhoon data.</span> ${error.message}`;
+      await new Promise(r => setTimeout(r, 1000 * retryTimes++));
       loadTyphoon();
     }
   }
