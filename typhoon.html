@@ -50,61 +50,78 @@ function parseCoordinate(coord) {
   return value;
 }
 
-function createStatusHtml(track) {
-  const lines = track.map(point => {
+function createStatusHtml(typhoons) {
+  const lines = typhoons.map(typhoon => {
     return `
-      <div class="typhoon-point">
-        <strong>${point.time}</strong>
-        ${point.intensity} · ${point.maximumWind} · ${point.latitude}, ${point.longitude}
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #ddd;">
+        <div><strong style="color: ${typhoon.color};">● ${typhoon.tropicalCycloneName}</strong></div>
+        <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">${typhoon.bulletinTime} · ${typhoon.bulletinType}</div>
+        <div style="font-size: 0.85rem;">${typhoon.points.length} track point${typhoon.points.length !== 1 ? 's' : ''}</div>
       </div>
     `;
   }).join('');
-  return `
-    <div><strong>Track points</strong>: ${track.length}</div>
-    ${lines}
-  `;
+  return lines;
 }
 
-function renderMap(points, typhoon) {
+function renderMap(typhoons) {
   const map = L.map('typhoon_map', { zoomControl: true });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors',
     maxZoom: 18,
   }).addTo(map);
 
-  const path = points.map((point) => [point.lat, point.lng]);
-  if (path.length === 0) {
-    statusContainer.textContent = 'No valid track coordinates available.';
-    return;
-  }
+  let allBounds = [];
+  const colors = ['#a00', '#f90', '#0a0', '#00a', '#a0a', '#0aa', '#fa0', '#a00'];
+  
+  typhoons.forEach((typhoon, typhoonIndex) => {
+    const points = typhoon.points;
+    const path = points.map((point) => [point.lat, point.lng]);
+    
+    if (path.length === 0) return;
+    
+    const color = colors[typhoonIndex % colors.length];
+    const polyline = L.polyline(path, { color: color, weight: 3, opacity: 0.8 }).addTo(map);
+    allBounds = allBounds.concat(path);
 
-  const polyline = L.polyline(path, { color: '#d33', weight: 4, opacity: 0.85 }).addTo(map);
-  const bounds = L.latLngBounds(path);
-  map.fitBounds(bounds.pad(0.45));
+    points.forEach((point, index) => {
+      const marker = L.circleMarker([point.lat, point.lng], {
+        radius: 5,
+        fillColor: color,
+        color: '#333',
+        weight: 1,
+        fillOpacity: 0.8,
+      }).addTo(map);
+      marker.bindPopup(`
+        <strong>${typhoon.tropicalCycloneName}</strong><br>
+        ${point.time}<br>
+        ${point.intensity}<br>
+        ${point.maximumWind}<br>
+        ${point.latitude}, ${point.longitude}
+      `);
 
-  points.forEach((point, index) => {
-    const marker = L.circleMarker([point.lat, point.lng], {
-      radius: 6,
-      fillColor: point.color,
-      color: '#333',
-      weight: 1,
-      fillOpacity: 0.9,
-    }).addTo(map);
-    marker.bindPopup(`
-      <strong>${typhoon.tropicalCycloneName}</strong><br>
-      ${point.time}<br>
-      ${point.intensity}<br>
-      ${point.maximumWind}<br>
-      ${point.latitude}, ${point.longitude}
-    `);
-
-    if (index === 0) {
-      L.marker([point.lat, point.lng]).addTo(map).bindPopup('Start: ' + point.time);
-    }
-    if (index === points.length - 1) {
-      L.marker([point.lat, point.lng]).addTo(map).bindPopup('Latest: ' + point.time);
-    }
+      if (index === 0) {
+        L.marker([point.lat, point.lng], { 
+          icon: L.icon({
+            iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4IiBmaWxsPSIjMzMzIi8+PC9zdmc+',
+            iconSize: [12, 12]
+          })
+        }).addTo(map).bindPopup('Start: ' + typhoon.tropicalCycloneName + ' - ' + point.time);
+      }
+      if (index === points.length - 1) {
+        L.marker([point.lat, point.lng], {
+          icon: L.icon({
+            iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4IiBmaWxsPSIjZjAwIi8+PC9zdmc+',
+            iconSize: [12, 12]
+          })
+        }).addTo(map).bindPopup('Latest: ' + typhoon.tropicalCycloneName + ' - ' + point.time);
+      }
+    });
   });
+
+  if (allBounds.length > 0) {
+    const bounds = L.latLngBounds(allBounds);
+    map.fitBounds(bounds.pad(0.45));
+  }
 }
 
 async function loadTyphoon() {
@@ -117,29 +134,46 @@ async function loadTyphoon() {
       return;
     }
 
-    const typhoon = typhoons[0];
-    const trackResp = await fetch(typhoonApiHost + '/typhoon-json/track/' + encodeURIComponent(typhoon.id), { credentials: 'same-origin' });
-    if (!trackResp.ok) throw new Error('Failed to fetch typhoon track: ' + trackResp.status);
-    const trackData = await trackResp.json();
-    const rawPoints = Array.isArray(trackData.track) ? trackData.track : [];
+    const colors = ['#a00', '#f90', '#0a0', '#00a', '#a0a', '#0aa', '#fa0', '#a00'];
+    const typhoonDataList = [];
 
-    const points = rawPoints.map((point) => {
-      const lat = parseCoordinate(point.latitude);
-      const lng = parseCoordinate(point.longitude);
-      return {
-        ...point,
-        lat,
-        lng,
-        color: point.intensity && point.intensity.toLowerCase().includes('typhoon') ? '#a00' : '#f90',
-      };
-    }).filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+    // Fetch track data for all typhoons
+    for (let i = 0; i < typhoons.length; i++) {
+      const typhoon = typhoons[i];
+      try {
+        const trackResp = await fetch(typhoonApiHost + '/typhoon-json/track/' + encodeURIComponent(typhoon.id), { credentials: 'same-origin' });
+        if (!trackResp.ok) throw new Error('Failed to fetch typhoon track: ' + trackResp.status);
+        const trackData = await trackResp.json();
+        const rawPoints = Array.isArray(trackData.track) ? trackData.track : [];
 
-    statusContainer.innerHTML = `
-      <div><strong>${trackData.tropicalCycloneName}</strong> · ${trackData.bulletinTime}</div>
-      <div>${trackData.bulletinType} · ${trackData.bulletinProvider}</div>
-    `;
-    trackContainer.innerHTML = createStatusHtml(points);
-    renderMap(points, trackData);
+        const points = rawPoints.map((point) => {
+          const lat = parseCoordinate(point.latitude);
+          const lng = parseCoordinate(point.longitude);
+          return {
+            ...point,
+            lat,
+            lng,
+          };
+        }).filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+
+        typhoonDataList.push({
+          ...trackData,
+          points: points,
+          color: colors[i % colors.length],
+        });
+      } catch (error) {
+        console.error('Error fetching track for typhoon ' + typhoon.id + ':', error);
+      }
+    }
+
+    if (typhoonDataList.length === 0) {
+      statusContainer.textContent = 'No valid typhoon track data available.';
+      return;
+    }
+
+    statusContainer.innerHTML = `<div><strong>${typhoonDataList.length} active typhoon${typhoonDataList.length !== 1 ? 's' : ''}</strong></div>`;
+    trackContainer.innerHTML = createStatusHtml(typhoonDataList);
+    renderMap(typhoonDataList);
   } catch (error) {
     console.error(error);
     statusContainer.innerHTML = `<span style="color: #a00;">Unable to load typhoon data.</span> ${error.message}`;
