@@ -92,7 +92,7 @@ title: Typhoon Track
       const current = getCurrentStatus(typhoon);
       let distanceText = '';
       if (userLat !== undefined && userLng !== undefined && current?.lat !== undefined && current?.lng !== undefined) {
-        const dist = getDistance(userLat, userLng, current.lat, current.lng);
+        const dist = getDistance(userLat, userLng, parseCoordinate(current.latitude), parseCoordinate(current.longitude));
         distanceText = ` · Distance: ${dist.toFixed(0)} km`;
       }
       return `
