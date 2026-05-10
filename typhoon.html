@@ -50,6 +50,7 @@ title: Typhoon Track
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
+  const hkCoordinates = {lat: 22.3193, lng: 114.1694};
   const typhoonApiHost = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '' : 'https://spark.cyrilng.com';
   const typhoonListUrl = typhoonApiHost + '/typhoon-json/list';
   const trackContainer = document.getElementById('typhoon_points');
@@ -67,7 +68,7 @@ title: Typhoon Track
 
   function getCurrentStatus(typhoon) {
     if (typhoon.track) {
-      return typhoon.track.filter(track => track.timePeriod === "CURRENT")[0]
+      return typhoon.track.filter(point => point.timePeriod === "CURRENT")[0]
     }
   }
 
@@ -87,19 +88,27 @@ title: Typhoon Track
     return d;
   }
 
-  function createStatusHtml(typhoons, userLat, userLng) {
+  function createStatusHtml(typhoons) {
     const lines = typhoons.map(typhoon => {
-      const current = getCurrentStatus(typhoon);
-      let distanceText = '';
-      if (userLat !== undefined && userLng !== undefined && current?.latitude !== undefined && current?.longitude !== undefined) {
-        const dist = getDistance(userLat, userLng, parseCoordinate(current.latitude), parseCoordinate(current.longitude));
-        distanceText = ` · Distance: ${dist.toFixed(0)} km`;
-      }
+      let currentPoint, nearestPoint;
+      typhoon.track.forEach(point => {
+        if (typeof nearestPoint === "undefined") {
+          nearestPoint = point;
+        } else if (nearestPoint.dist > point.dist){
+          nearestPoint = point;
+        }
+        if (point.timePeriod === "CURRENT") {
+          currentPoint = point;
+        }
+      });
+      const distanceText = `Current distance from HK: ${currentPoint?.dist?.toFixed(0)} km`;
+      const nearestPointText = `Nearest approach: ${nearestPoint?.dist?.toFixed(0)} km`;
       return `
       <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #ddd;">
         <div><strong style="color: ${typhoon.color};">● ${current?.intensity} ${typhoon.tropicalCycloneName}</strong></div>
         <div style="font-size: 0.9rem; margin-bottom: 0.5rem;">${typhoon.bulletinTime} · Maximum wind speed: ${current?.maximumWind} · (${current?.latitude} ${current?.longitude})</div>
         <div style="font-size: 0.85rem;">${distanceText}</div>
+        <div style="font-size: 0.85rem;">${nearestPointText}</div>
       </div>
     `;
     }).join('');
@@ -144,21 +153,21 @@ title: Typhoon Track
         ${point.time}<br>
         ${point.intensity}<br>
         ${point.maximumWind}<br>
-        ${point.latitude}, ${point.longitude}
+        ${point.dist}km (${point.latitude}, ${point.longitude})
       `);
 
         if (point.timePeriod === "CURRENT") {
           L.marker([point.lat, point.lng], {
             icon: L.icon({
               iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjgwMCIgdmlld0JveD0iMCAwIDI0IDI0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDx0aXRsZT50eXBob29uX2xpbmU8L3RpdGxlPgogIDxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+CiAgICA8cGF0aCBkPSJNMjQgMHYyNEgwVjB6TTEyLjU5MyAyMy4yNThsLS4wMTEuMDAyLS4wNzEuMDM1LS4wMi4wMDQtLjAxNC0uMDA0LS4wNzEtLjAzNXEtLjAxNi0uMDA1LS4wMjQuMDA1bC0uMDA0LjAxLS4wMTcuNDI4LjAwNS4wMi4wMS4wMTMuMTA0LjA3NC4wMTUuMDA0LjAxMi0uMDA0LjEwNC0uMDc0LjAxMi0uMDE2LjAwNC0uMDE3LS4wMTctLjQyN3EtLjAwNC0uMDE2LS4wMTctLjAxOG0uMjY1LS4xMTMtLjAxMy4wMDItLjE4NS4wOTMtLjAxLjAxLS4wMDMuMDExLjAxOC40My4wMDUuMDEyLjAwOC4wMDcuMjAxLjA5M3EuMDE5LjAwNS4wMjktLjAwOGwuMDA0LS4wMTQtLjAzNC0uNjE0cS0uMDA1LS4wMTgtLjAyLS4wMjJtLS43MTUuMDAyYS4wMi4wMiAwIDAgMC0uMDI3LjAwNmwtLjAwNi4wMTQtLjAzNC42MTRxLjAwMS4wMTguMDE3LjAyNGwuMDE1LS4wMDIuMjAxLS4wOTMuMDEtLjAwOC4wMDQtLjAxMS4wMTctLjQzLS4wMDMtLjAxMi0uMDEtLjAxeiIvPgogICAgPHBhdGggZD0iTTE0IDJjMi4zOTcgMCA0LjYuODQ0IDYuMzIzIDIuMjUybC45ODUuODA0Yy40NTUuMzcyLjE2IDEuMTA4LS40MjUgMS4wNjNsLTEuMjY4LS4wOTZhOC4yIDguMiAwIDAgMC0yLjE1OS4xMjZBNy45OCA3Ljk4IDAgMCAxIDIwIDEyYzAgNS41MjMtNC40NzcgMTAtMTAgMTBhOS45NyA5Ljk3IDAgMCAxLTYuMzIyLTIuMjUxbC0uOTg1LS44MDVjLS40NTUtLjM3Mi0uMTYtMS4xMDguNDI1LTEuMDYzbDEuMjY4LjA5NmMuNzIuMDU0IDEuNDY0LjAxIDIuMTU5LS4xMjZBNy45OCA3Ljk4IDAgMCAxIDQgMTJDNCA2LjQ3NyA4LjQ3OCAyIDE0IDJtMCAyYTggOCAwIDAgMC04IDggNiA2IDAgMCAwIDMuMiA1LjMwOGwuNzE5LjM4YS42MDguNjA4IDAgMCAxLS4wMjggMS4wODVjLS43MzEuMzQtMS40NzIuNjYyLTIuMjQ5Ljg3NEE4IDggMCAwIDAgMTggMTJhNiA2IDAgMCAwLTMuMTk5LTUuMzA4bC0uNzE5LS4zOGEuNjA4LjYwOCAwIDAgMSAuMDI4LTEuMDg1Yy43MzEtLjM0IDEuNDcyLS42NjIgMi4yNDktLjg3NEE4IDggMCAwIDAgMTQgNG0tMiA1YTMgMyAwIDEgMSAwIDYgMyAzIDAgMCAxIDAtNm0wIDJhMSAxIDAgMSAwIDAgMiAxIDEgMCAwIDAgMC0yIiBmaWxsPSIjMDkyNDRiIi8+CiAgPC9nPgo8L3N2Zz4K',
-              iconSize: [15, 15]
+              iconSize: [20, 20]
             })
           }).addTo(map).bindPopup(`
           <strong>${typhoon.tropicalCycloneName}</strong><br>
           ${point.time}<br>
           ${point.intensity}<br>
           ${point.maximumWind}<br>
-          ${point.latitude}, ${point.longitude}
+          ${point.dist}km (${point.latitude}, ${point.longitude})
       `);
           L.marker([point.lat, point.lng], {
             icon: L.divIcon({
@@ -180,19 +189,7 @@ title: Typhoon Track
 
   async function loadTyphoon() {
     try {
-      let userLat, userLng;
-      if (navigator.geolocation) {
-        try {
-          const position = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
-          });
-          userLat = position.coords.latitude;
-          userLng = position.coords.longitude;
-        } catch (error) {
-          console.warn('Geolocation not available or denied:', error);
-        }
-      }
-
+      console.log("loadTyphoon()");
       const listResp = await fetch(typhoonListUrl, { credentials: 'same-origin' });
       if (!listResp.ok) throw new Error('Failed to fetch typhoon list: ' + listResp.status);
       const typhoons = await listResp.json();
@@ -216,12 +213,16 @@ title: Typhoon Track
           const points = rawPoints.map((point) => {
             const lat = parseCoordinate(point.latitude);
             const lng = parseCoordinate(point.longitude);
+            const dist = getDistance(hkCoordinates.lat, hkCoordinates.lng, lat, lng);
             return {
               ...point,
-              lat,
-              lng,
+              lat: lat,
+              lng : lng,
+              dist: dist
             };
           }).filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+          
+          console.log(JSON.stringify(points));
 
           typhoonDataList.push({
             ...trackData,
@@ -239,11 +240,12 @@ title: Typhoon Track
       }
 
       statusContainer.innerHTML = `<div><strong>Tracking ${typhoonDataList.length} active typhoon${typhoonDataList.length !== 1 ? 's' : ''}</strong></div>`;
-      trackContainer.innerHTML = createStatusHtml(typhoonDataList, userLat, userLng);
+      trackContainer.innerHTML = createStatusHtml(typhoonDataList);
       renderMap(typhoonDataList);
     } catch (error) {
       console.error(error);
       statusContainer.innerHTML = `<span style="color: #a00;">Unable to load typhoon data.</span> ${error.message}`;
+      loadTyphoon();
     }
   }
 
