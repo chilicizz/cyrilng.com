@@ -100,8 +100,10 @@ title: Typhoon Track
     const lines = typhoons.map(typhoon => {
       const currentPoint = getCurrentStatus(typhoon);
       const nearestPoint = getNearestPoint(typhoon);
-      const distanceText = `Current distance from HK: ${currentPoint?.dist.toFixed(0)} km`;
-      const nearestPointText = `Nearest approach: ${nearestPoint?.dist.toFixed(0)} km`;
+      console.log(JSON.stringify(currentPoint));
+      console.log(JSON.stringify(nearestPoint));
+      const distanceText = `Current distance from HK: ${currentPoint?.dist?.toFixed(0)} km`;
+      const nearestPointText = `Nearest approach: ${nearestPoint?.dist?.toFixed(0)} km`;
       return `
       <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #ddd;">
         <div><strong style="color: ${typhoon.color};">● ${currentPoint?.intensity} ${typhoon.tropicalCycloneName}</strong></div>
