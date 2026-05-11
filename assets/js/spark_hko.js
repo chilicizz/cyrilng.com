@@ -133,3 +133,46 @@ function createAnchorElement(aqi_payload) {
         aqi_payload.data?.iaqi?.p?.v + " bar";
     return link;
 }
+
+
+// TYPHOON
+
+function parseCoordinate(coord) {
+    if (!coord) return NaN;
+    const match = coord.trim().match(/^([0-9.+-]+)\s*([NSEW])$/i);
+    if (!match) return NaN;
+    let value = parseFloat(match[1]);
+    const dir = match[2].toUpperCase();
+    if (dir === 'S' || dir === 'W') value = -value;
+    return value;
+}
+
+function getCurrentStatus(typhoon) {
+    if (typhoon.points) {
+        return typhoon.points.find(point => point.timePeriod === "CURRENT");
+    }
+    return null;
+}
+
+function deg2rad(deg) {
+    return deg * (Math.PI / 180);
+}
+
+function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = R * c; // Distance in km
+    return d;
+}
+
+function getNearestPoint(typhoon) {
+    if (typhoon.points && typhoon.points.length > 0) {
+        return typhoon.points.reduce((min, point) => point.dist < min.dist ? point : min);
+    }
+    return null;
+}

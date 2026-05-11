@@ -3,39 +3,6 @@ layout: default
 title: Typhoon Track
 ---
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-<style>
-  #typhoon_map {
-    width: 100%;
-    height: 520px;
-    margin: 1rem 0;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-  }
-
-  .typhoon-panel {
-    padding: 1rem;
-    background: #333333;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-  }
-
-  .typhoon-point {
-    margin: 0.4rem 0;
-    line-height: 1.4;
-  }
-
-  .typhoon-point strong {
-    display: inline-block;
-    width: 10rem;
-  }
-
-  .typhoon-label {
-    font-size: 1rem;
-    font-weight: bold;
-    color: #333;
-  }
-</style>
-
 <h1>Typhoon Track</h1>
 <p></p>
 <div id="typhoon_points" class="typhoon-panel"></div>
@@ -46,50 +13,12 @@ title: Typhoon Track
 <script>
   const retryTimes = 1;
   const hkCoordinates = { lat: 22.3193, lng: 114.1694 };
-  const typhoonApiHost = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:8080' : 'https://spark.cyrilng.com';
+  //const typhoonApiHost = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:8080' : 'https://spark.cyrilng.com';
+  const typhoonApiHost = 'https://spark.cyrilng.com';
+
   const typhoonListUrl = typhoonApiHost + '/typhoon-json/list';
   const trackContainer = document.getElementById('typhoon_points');
   const statusContainer = document.getElementById('typhoon_status');
-
-  function parseCoordinate(coord) {
-    if (!coord) return NaN;
-    const match = coord.trim().match(/^([0-9.+-]+)\s*([NSEW])$/i);
-    if (!match) return NaN;
-    let value = parseFloat(match[1]);
-    const dir = match[2].toUpperCase();
-    if (dir === 'S' || dir === 'W') value = -value;
-    return value;
-  }
-
-  function getCurrentStatus(typhoon) {
-    if (typhoon.points) {
-      return typhoon.points.find(point => point.timePeriod === "CURRENT");
-    }
-    return null;
-  }
-
-  function deg2rad(deg) {
-    return deg * (Math.PI / 180);
-  }
-
-  function getDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; // Radius of the earth in km
-    const dLat = deg2rad(lat2 - lat1);
-    const dLon = deg2rad(lon2 - lon1);
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const d = R * c; // Distance in km
-    return d;
-  }
-
-  function getNearestPoint(typhoon) {
-    if (typhoon.points && typhoon.points.length > 0) {
-      return typhoon.points.reduce((min, point) => point.dist < min.dist ? point : min);
-    }
-    return null;
-  }
 
   function createStatusHtml(typhoons) {
     const lines = typhoons.map(typhoon => {
@@ -258,5 +187,10 @@ title: Typhoon Track
     }
   }
 
-  document.addEventListener('DOMContentLoaded', loadTyphoon);
+  // document.addEventListener('DOMContentLoaded', loadTyphoon);
+
+  window.addEventListener("load", () => {
+    // Runs only after images, frames, and styles are finished loading
+    loadTyphoon()
+  });
 </script>
