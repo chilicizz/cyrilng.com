@@ -6,7 +6,7 @@ title: Typhoon Track
 <h1>Typhoon Track</h1>
 <p></p>
 <div id="typhoon_points" class="typhoon-panel"></div>
-<div id="typhoon_map"></div>
+<!-- map container is created dynamically after data loads to avoid blank space -->
 <div id="typhoon_status" class="typhoon-panel">Loading typhoon information…</div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -19,6 +19,32 @@ title: Typhoon Track
   const typhoonListUrl = typhoonApiHost + '/typhoon-json/list';
   const trackContainer = document.getElementById('typhoon_points');
   const statusContainer = document.getElementById('typhoon_status');
+  let mapInstance = null;
+
+  function removeMapContainer() {
+    try {
+      if (mapInstance) {
+        mapInstance.remove();
+        mapInstance = null;
+      }
+    } catch (e) {
+      console.warn('Error removing map instance', e);
+    }
+    const existing = document.getElementById('typhoon_map');
+    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+  }
+
+  function createMapContainer() {
+    // ensure no previous container exists
+    removeMapContainer();
+    const div = document.createElement('div');
+    div.id = 'typhoon_map';
+    // give it a sensible default height so the map is visible
+    div.style.minHeight = '360px';
+    div.style.marginTop = '1rem';
+    trackContainer.insertAdjacentElement('afterend', div);
+    return div;
+  }
 
   function createStatusHtml(typhoons) {
     const lines = typhoons.map(typhoon => {
@@ -41,7 +67,10 @@ title: Typhoon Track
   }
 
   function renderMap(typhoons) {
+    // create container only now and initialise the map
+    createMapContainer();
     const map = L.map('typhoon_map', { zoomControl: true });
+    mapInstance = map;
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
       maxZoom: 10,
@@ -173,6 +202,8 @@ title: Typhoon Track
 
       if (typhoonDataList.length === 0) {
         statusContainer.textContent = 'No valid typhoon track data available.';
+        // ensure no map is shown when there's no data
+        removeMapContainer();
         return;
       }
 
@@ -182,6 +213,8 @@ title: Typhoon Track
     } catch (error) {
       console.error(error);
       statusContainer.innerHTML = `<span style="color: #a00;">Unable to load typhoon data.</span> ${error.message}`;
+      // remove map if an error occurred — do not display a blank map
+      removeMapContainer();
       await new Promise(r => setTimeout(r, 1000 * retryTimes++));
       loadTyphoon();
     }
