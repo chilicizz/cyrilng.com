@@ -5,9 +5,9 @@ title: Typhoon Track
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <h1>Typhoon Track</h1>
 <p></p>
-<div id="typhoon_points" class="typhoon-panel"></div>
+<div id="hko_warnings_details" class="typhoon-panel" style="margin-bottom: 1rem;">Loading weather warnings…</div>
+<div id="typhoon_points" class="typhoon-panel">Loading typhoon information…</div>
 <!-- map container is created dynamically after data loads to avoid blank space -->
-<div id="typhoon_status" class="typhoon-panel">Loading typhoon information…</div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
@@ -18,7 +18,7 @@ title: Typhoon Track
 
   const typhoonListUrl = typhoonApiHost + '/typhoon-json/list';
   const trackContainer = document.getElementById('typhoon_points');
-  const statusContainer = document.getElementById('typhoon_status');
+  const warningsContainer = document.getElementById('hko_warnings_details');
   let mapInstance = null;
 
   function removeMapContainer() {
@@ -85,6 +85,93 @@ title: Typhoon Track
     const bearing = getBearing(previousPoint.lat, previousPoint.lng, currentPoint.lat, currentPoint.lng);
 
     return { bearing, distanceKm, speedKph };
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function formatWarningTime(value) {
+    if (!value) return 'N/A';
+    try {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString([], {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return value;
+    }
+  }
+
+  function getWarningTitle(detail) {
+    if (!detail) return 'Weather Warning';
+    if (Object.hasOwn(detail, 'subtype')) {
+      return WARNING_DESCRIPTION_MAP?.[detail.subtype] || detail.subtype || 'Weather Warning';
+    }
+    return WARNING_DESCRIPTION_MAP?.[detail.warningStatementCode] || detail.warningStatementCode || 'Weather Warning';
+  }
+
+  function renderHkoWarnings(payload) {
+    const details = Array.isArray(payload?.details) ? payload.details : [];
+
+    if (!warningsContainer) return;
+
+    if (!details.length) {
+      warningsContainer.innerHTML = '<div style="font-size: 0.95rem;">No active weather warnings.</div>';
+      return;
+    }
+
+    warningsContainer.innerHTML = details.map((detail) => {
+      const title = getWarningTitle(detail);
+      const contents = Array.isArray(detail.contents) ? detail.contents.filter(Boolean) : [];
+      const listItems = contents.map((item) => {
+        const escapedText = escapeHtml(item).replace(/\n/g, '<br>');
+        return `<li style="margin-bottom: 0.4rem;">${escapedText}</li>`;
+      }).join('');
+      const timeText = detail.updateTime ? `<div style="font-size: 0.8rem; color: #ccc; margin-top: 0.35rem;">Updated ${formatWarningTime(detail.updateTime)}</div>` : '';
+
+      return `
+        <div style="margin-bottom: 0.8rem; padding: 0.8rem; border: 1px solid #555; border-radius: 6px; background: #2a2a2a;">
+          <div><strong>${escapeHtml(title)}</strong></div>
+          <ul style="margin: 0.4rem 0 0 1rem; padding: 0; font-size: 0.9rem; line-height: 1.4;">${listItems}</ul>
+          ${timeText}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function attachHkoWarningsStream() {
+    if (!warningsContainer) return;
+
+    try {
+      const source = new EventSource(typhoonApiHost + '/hko/warnings/stream');
+      source.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          renderHkoWarnings(payload);
+        } catch (error) {
+          console.error('Failed to parse HKO warnings payload:', error);
+          warningsContainer.innerHTML = '<div style="color: #a00;">Unable to load weather warnings.</div>';
+        }
+      };
+      source.onerror = (error) => {
+        console.error('HKO warnings stream error:', error);
+        warningsContainer.innerHTML = '<div style="color: #a00;">Unable to load weather warnings right now.</div>';
+      };
+    } catch (error) {
+      console.error('Failed to connect to HKO warnings stream:', error);
+      warningsContainer.innerHTML = '<div style="color: #a00;">Unable to load weather warnings right now.</div>';
+    }
   }
 
   function createStatusHtml(typhoons) {
@@ -206,7 +293,7 @@ title: Typhoon Track
       if (!listResp.ok) throw new Error('Failed to fetch typhoon list: ' + listResp.status);
       const typhoons = await listResp.json();
       if (!Array.isArray(typhoons) || typhoons.length === 0) {
-        statusContainer.textContent = 'No active typhoons available from the API.';
+        trackContainer.textContent = 'No active typhoons available from the API.';
         return;
       }
 
@@ -247,18 +334,17 @@ title: Typhoon Track
       }
 
       if (typhoonDataList.length === 0) {
-        statusContainer.textContent = 'No valid typhoon track data available.';
+        trackContainer.textContent = 'No valid typhoon track data available.';
         // ensure no map is shown when there's no data
         removeMapContainer();
         return;
       }
 
-      statusContainer.innerHTML = '';
       trackContainer.innerHTML = createStatusHtml(typhoonDataList);
       renderMap(typhoonDataList);
     } catch (error) {
       console.error(error);
-      statusContainer.innerHTML = `<span style="color: #a00;">Unable to load typhoon data.</span> ${error.message}`;
+      trackContainer.innerHTML = `<span style="color: #a00;">Unable to load typhoon data.</span> ${error.message}`;
       // remove map if an error occurred — do not display a blank map
       removeMapContainer();
       await new Promise(r => setTimeout(r, 1000 * retryTimes++));
@@ -270,6 +356,7 @@ title: Typhoon Track
 
   window.addEventListener("load", () => {
     // Runs only after images, frames, and styles are finished loading
-    loadTyphoon()
+    attachHkoWarningsStream();
+    loadTyphoon();
   });
 </script>
