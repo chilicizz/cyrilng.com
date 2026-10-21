@@ -292,7 +292,11 @@ title: HKO Warnings
       const listResp = await fetch(typhoonListUrl, { credentials: 'same-origin' });
       if (!listResp.ok) throw new Error('Failed to fetch typhoon list: ' + listResp.status);
       const typhoons = await listResp.json();
-      if (!Array.isArray(typhoons) || typhoons.length === 0) {
+      if (!Array.isArray(typhoons)) {
+        throw new Error('Typhoon API returned an invalid list response.');
+      }
+      retryTimes = 1;
+      if (typhoons.length === 0) {
         trackContainer.textContent = 'No active typhoons available from the API.';
         return;
       }
@@ -334,10 +338,7 @@ title: HKO Warnings
       }
 
       if (typhoonDataList.length === 0) {
-        trackContainer.textContent = 'No valid typhoon track data available.';
-        // ensure no map is shown when there's no data
-        removeMapContainer();
-        return;
+        throw new Error('Typhoon tracks are not available yet.');
       }
 
       trackContainer.innerHTML = createStatusHtml(typhoonDataList);
@@ -347,7 +348,7 @@ title: HKO Warnings
       trackContainer.innerHTML = `<span style="color: #a00;">Unable to load typhoon data.</span> ${error.message}`;
       // remove map if an error occurred — do not display a blank map
       removeMapContainer();
-      await new Promise(r => setTimeout(r, 1000 * retryTimes++));
+      await new Promise(r => setTimeout(r, Math.min(1000 * retryTimes++, 60000)));
       loadTyphoon();
     }
   }
