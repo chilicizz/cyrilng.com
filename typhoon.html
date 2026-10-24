@@ -18,9 +18,9 @@ title: HKO Warnings
       <option value="">Loading storms…</option>
     </select>
     <div class="typhoon-timeline">
-      <button id="typhoon-history-previous" type="button" aria-label="Previous snapshot" title="Previous snapshot" disabled>Previous</button>
+      <button id="typhoon-history-previous" class="typhoon-step-link" type="button" aria-label="Previous snapshot" disabled>← Earlier</button>
       <input id="typhoon-history-range" type="range" min="0" max="0" value="0" aria-label="Snapshot timeline" disabled>
-      <button id="typhoon-history-next" type="button" aria-label="Next snapshot" title="Next snapshot" disabled>Next</button>
+      <button id="typhoon-history-next" class="typhoon-step-link" type="button" aria-label="Next snapshot" disabled>Later →</button>
     </div>
     <output id="typhoon-history-time" class="typhoon-history-time" aria-live="polite"></output>
   </div>
@@ -213,18 +213,21 @@ title: HKO Warnings
       const bearingText = currentPoint ? `Bearing from HK: ${formatBearing(getBearing(hkCoordinates.lat, hkCoordinates.lng, currentPoint.lat, currentPoint.lng))}` : '';
       const movementText = movement ? `Movement: ${formatBearing(movement.bearing)}${movement.speedKph ? ` · ${movement.speedKph.toFixed(0)} km/h` : ''}` : '';
       const nearestText = `Nearest approach to HK: ${nearestPoint?.dist?.toFixed(0)} km ${nearestPoint?.time ?? ""}`;
-      const lastUpdatedText = typhoon.isHistorical
-        ? `Historical snapshot · HKO bulletin: ${typhoon.bulletinTime || 'N/A'}`
-        : `Last update: ${typhoon.bulletinTime || currentPoint?.time || 'N/A'}`;
+      const bulletinDetails = typhoon.isHistorical
+        ? `Maximum wind speed: ${currentPoint?.maximumWind} · (${currentPoint?.latitude} ${currentPoint?.longitude})`
+        : `${typhoon.bulletinTime} · Maximum wind speed: ${currentPoint?.maximumWind} · (${currentPoint?.latitude} ${currentPoint?.longitude})`;
+      const lastUpdated = typhoon.isHistorical
+        ? ''
+        : `<div style="font-size: 0.8rem; color: #ccc;">Last update: ${typhoon.bulletinTime || currentPoint?.time || 'N/A'}</div>`;
       return `
       <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #ddd;">
         <div><strong style="color: ${typhoon.color};">● ${currentPoint?.intensity} ${typhoon.tropicalCycloneName}</strong></div>
-        <div style="font-size: 0.9rem;">${typhoon.bulletinTime} · Maximum wind speed: ${currentPoint?.maximumWind} · (${currentPoint?.latitude} ${currentPoint?.longitude})</div>
+        <div style="font-size: 0.9rem;">${bulletinDetails}</div>
         <div style="font-size: 0.85rem;">${distanceText}</div>
         <div style="font-size: 0.85rem;">${bearingText}</div>
         <div style="font-size: 0.85rem;">${movementText}</div>
         <div style="font-size: 0.85rem;">${nearestText}</div>
-        <div style="font-size: 0.8rem; color: #ccc;">${lastUpdatedText}</div>
+        ${lastUpdated}
       </div>
     `;
     }).join('');
