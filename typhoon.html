@@ -6,6 +6,25 @@ title: HKO Warnings
 <h1>HK Observatory Warnings</h1>
 <p></p>
 <div id="hko_warnings_details" class="typhoon-panel" style="margin-bottom: 1rem;">Loading weather warnings…</div>
+<section class="typhoon-toolbar" aria-label="Typhoon track view">
+  <fieldset class="typhoon-mode-switch">
+    <legend>View</legend>
+    <label><input type="radio" name="typhoon-mode" value="live" checked> Live</label>
+    <label><input type="radio" name="typhoon-mode" value="history"> History</label>
+  </fieldset>
+  <div id="typhoon-history-controls" class="typhoon-history-controls" hidden>
+    <label for="typhoon-history-storm">Storm</label>
+    <select id="typhoon-history-storm" disabled>
+      <option value="">Loading storms…</option>
+    </select>
+    <div class="typhoon-timeline">
+      <button id="typhoon-history-previous" type="button" aria-label="Previous snapshot" title="Previous snapshot" disabled>Previous</button>
+      <input id="typhoon-history-range" type="range" min="0" max="0" value="0" aria-label="Snapshot timeline" disabled>
+      <button id="typhoon-history-next" type="button" aria-label="Next snapshot" title="Next snapshot" disabled>Next</button>
+    </div>
+    <output id="typhoon-history-time" class="typhoon-history-time" aria-live="polite"></output>
+  </div>
+</section>
 <div id="typhoon_points" class="typhoon-panel">Loading typhoon information…</div>
 <!-- map container is created dynamically after data loads to avoid blank space -->
 
@@ -19,7 +38,17 @@ title: HKO Warnings
   const typhoonListUrl = typhoonApiHost + '/typhoon-json/list';
   const trackContainer = document.getElementById('typhoon_points');
   const warningsContainer = document.getElementById('hko_warnings_details');
+  const historyControls = document.getElementById('typhoon-history-controls');
+  const historyStormSelect = document.getElementById('typhoon-history-storm');
+  const historyRange = document.getElementById('typhoon-history-range');
+  const historyTime = document.getElementById('typhoon-history-time');
+  const historyPrevious = document.getElementById('typhoon-history-previous');
+  const historyNext = document.getElementById('typhoon-history-next');
   let mapInstance = null;
+  let archivedStorms = null;
+  let historySnapshots = [];
+  let selectedHistoryIndex = -1;
+  let historyRequestId = 0;
 
   function removeMapContainer() {
     try {
@@ -179,11 +208,14 @@ title: HKO Warnings
       const currentPoint = getCurrentStatus(typhoon);
       const nearestPoint = getNearestPoint(typhoon);
       const movement = getMovementSummary(typhoon);
-      const distanceText = `Current distance from HK: ${currentPoint?.dist?.toFixed(0)} km`;
+      const distanceLabel = typhoon.isHistorical ? 'Distance from HK at bulletin' : 'Current distance from HK';
+      const distanceText = `${distanceLabel}: ${currentPoint?.dist?.toFixed(0)} km`;
       const bearingText = currentPoint ? `Bearing from HK: ${formatBearing(getBearing(hkCoordinates.lat, hkCoordinates.lng, currentPoint.lat, currentPoint.lng))}` : '';
       const movementText = movement ? `Movement: ${formatBearing(movement.bearing)}${movement.speedKph ? ` · ${movement.speedKph.toFixed(0)} km/h` : ''}` : '';
       const nearestText = `Nearest approach to HK: ${nearestPoint?.dist?.toFixed(0)} km ${nearestPoint?.time ?? ""}`;
-      const lastUpdatedText = `Last update: ${typhoon.bulletinTime || currentPoint?.time || 'N/A'}`;
+      const lastUpdatedText = typhoon.isHistorical
+        ? `Historical snapshot · HKO bulletin: ${typhoon.bulletinTime || 'N/A'}`
+        : `Last update: ${typhoon.bulletinTime || currentPoint?.time || 'N/A'}`;
       return `
       <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #ddd;">
         <div><strong style="color: ${typhoon.color};">● ${currentPoint?.intensity} ${typhoon.tropicalCycloneName}</strong></div>
@@ -286,7 +318,178 @@ title: HKO Warnings
     }
   }
 
+  function prepareTrack(trackData, color, isHistorical = false) {
+    const rawPoints = Array.isArray(trackData.track) ? trackData.track : [];
+    const points = rawPoints.map((point) => {
+      const lat = parseCoordinate(point.latitude);
+      const lng = parseCoordinate(point.longitude);
+      const dist = getDistance(hkCoordinates.lat, hkCoordinates.lng, lat, lng);
+      return { ...point, lat, lng, dist };
+    }).filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+
+    return { ...trackData, points, color, isHistorical };
+  }
+
+  function renderTyphoonTracks(typhoons) {
+    trackContainer.innerHTML = createStatusHtml(typhoons);
+    renderMap(typhoons);
+  }
+
+  function isHistoryMode() {
+    return document.querySelector('input[name="typhoon-mode"]:checked')?.value === 'history';
+  }
+
+  async function fetchJson(url) {
+    const response = await fetch(url, { credentials: 'same-origin' });
+    if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+    return response.json();
+  }
+
+  function updateHistoryNavigation() {
+    const hasSnapshots = historySnapshots.length > 0 && selectedHistoryIndex >= 0;
+    historyRange.disabled = historySnapshots.length < 2;
+    historyRange.min = '0';
+    historyRange.max = String(Math.max(0, historySnapshots.length - 1));
+    historyRange.value = String(Math.max(0, selectedHistoryIndex));
+    historyPrevious.disabled = !hasSnapshots || selectedHistoryIndex <= 0;
+    historyNext.disabled = !hasSnapshots || selectedHistoryIndex >= historySnapshots.length - 1;
+  }
+
+  function formatSnapshotTime(snapshot) {
+    const bulletinTime = snapshot?.bulletinTime;
+    return bulletinTime ? formatWarningTime(bulletinTime) : 'Bulletin time unavailable';
+  }
+
+  async function loadArchivedStorms() {
+    const requestId = ++historyRequestId;
+    historyControls.hidden = false;
+    historyTime.textContent = 'Loading storm history…';
+    trackContainer.textContent = 'Loading storm history…';
+    removeMapContainer();
+    historyStormSelect.disabled = true;
+    historyRange.disabled = true;
+    historyPrevious.disabled = true;
+    historyNext.disabled = true;
+
+    try {
+      if (archivedStorms === null) {
+        archivedStorms = await fetchJson(`${typhoonApiHost}/typhoon-json/history/storms`);
+      }
+      if (requestId !== historyRequestId || !isHistoryMode()) return;
+      historyStormSelect.replaceChildren(new Option('Select a storm', ''));
+      archivedStorms.forEach((storm) => {
+        historyStormSelect.add(new Option(`${storm.englishName} (${storm.id})`, storm.id));
+      });
+      historyStormSelect.disabled = archivedStorms.length === 0;
+      if (archivedStorms.length === 0) {
+        historySnapshots = [];
+        selectedHistoryIndex = -1;
+        updateHistoryNavigation();
+        historyTime.textContent = 'No typhoon track history is available.';
+        trackContainer.textContent = 'No saved typhoon tracks are available in the seven-day history window.';
+        removeMapContainer();
+        return;
+      }
+      historyStormSelect.value = archivedStorms[0].id;
+      await loadStormHistory(archivedStorms[0].id);
+    } catch (error) {
+      if (requestId !== historyRequestId) return;
+      historyTime.textContent = 'Unable to load typhoon history.';
+      trackContainer.textContent = error.message;
+      removeMapContainer();
+    }
+  }
+
+  async function loadStormHistory(stormId) {
+    const requestId = ++historyRequestId;
+    historyTime.textContent = 'Loading snapshots…';
+    historyRange.disabled = true;
+    historyPrevious.disabled = true;
+    historyNext.disabled = true;
+    trackContainer.textContent = 'Loading historical track…';
+    removeMapContainer();
+
+    try {
+      const snapshots = [];
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const page = await fetchJson(`${typhoonApiHost}/typhoon-json/history/storms/${encodeURIComponent(stormId)}/snapshots?offset=${offset}&limit=200`);
+        snapshots.push(...page.snapshots);
+        offset = page.nextOffset;
+        hasMore = page.hasMore;
+      }
+      if (requestId !== historyRequestId || !isHistoryMode()) return;
+      historySnapshots = snapshots.sort((left, right) =>
+        left.capturedAtMillis - right.capturedAtMillis || left.snapshotId.localeCompare(right.snapshotId));
+      if (historySnapshots.length === 0) {
+        selectedHistoryIndex = -1;
+        updateHistoryNavigation();
+        historyTime.textContent = 'No saved track snapshots remain for this storm.';
+        trackContainer.textContent = 'No track snapshots are available for this storm.';
+        removeMapContainer();
+        return;
+      }
+      selectedHistoryIndex = historySnapshots.length - 1;
+      updateHistoryNavigation();
+      await loadHistorySnapshot(selectedHistoryIndex, requestId);
+    } catch (error) {
+      if (requestId !== historyRequestId) return;
+      historyTime.textContent = 'Unable to load this storm history.';
+      trackContainer.textContent = error.message;
+      removeMapContainer();
+    }
+  }
+
+  async function loadHistorySnapshot(index, requestId = ++historyRequestId) {
+    const snapshot = historySnapshots[index];
+    if (!snapshot) return;
+    selectedHistoryIndex = index;
+    updateHistoryNavigation();
+    historyTime.textContent = formatSnapshotTime(snapshot);
+    trackContainer.textContent = 'Loading historical track…';
+    removeMapContainer();
+
+    try {
+      const stormId = historyStormSelect.value;
+      const query = new URLSearchParams({ snapshotId: snapshot.snapshotId });
+      const track = await fetchJson(`${typhoonApiHost}/typhoon-json/history/storms/${encodeURIComponent(stormId)}/track?${query}`);
+      if (requestId !== historyRequestId || !isHistoryMode()) return;
+      renderTyphoonTracks([prepareTrack(track, '#a04432', true)]);
+      historyTime.textContent = formatSnapshotTime({ ...snapshot, bulletinTime: track.bulletinTime });
+    } catch (error) {
+      if (requestId !== historyRequestId) return;
+      trackContainer.textContent = `Unable to load this snapshot: ${error.message}`;
+      removeMapContainer();
+    }
+  }
+
+  document.querySelectorAll('input[name="typhoon-mode"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      if (isHistoryMode()) {
+        loadArchivedStorms();
+      } else {
+        historyControls.hidden = true;
+        historyRequestId++;
+        loadTyphoon();
+      }
+    });
+  });
+  historyStormSelect.addEventListener('change', () => {
+    if (historyStormSelect.value) loadStormHistory(historyStormSelect.value);
+  });
+  historyRange.addEventListener('change', () => {
+    loadHistorySnapshot(Number(historyRange.value));
+  });
+  historyPrevious.addEventListener('click', () => {
+    if (selectedHistoryIndex > 0) loadHistorySnapshot(selectedHistoryIndex - 1);
+  });
+  historyNext.addEventListener('click', () => {
+    if (selectedHistoryIndex < historySnapshots.length - 1) loadHistorySnapshot(selectedHistoryIndex + 1);
+  });
+
   async function loadTyphoon() {
+    if (isHistoryMode()) return;
     try {
       console.log("loadTyphoon()");
       const listResp = await fetch(typhoonListUrl, { credentials: 'same-origin' });
@@ -298,6 +501,7 @@ title: HKO Warnings
       retryTimes = 1;
       if (typhoons.length === 0) {
         trackContainer.textContent = 'No active typhoons available from the API.';
+        removeMapContainer();
         return;
       }
 
@@ -311,27 +515,7 @@ title: HKO Warnings
           const trackResp = await fetch(typhoonApiHost + '/typhoon-json/track/' + encodeURIComponent(typhoon.id), { credentials: 'same-origin' });
           if (!trackResp.ok) throw new Error('Failed to fetch typhoon track: ' + trackResp.status);
           const trackData = await trackResp.json();
-          const rawPoints = Array.isArray(trackData.track) ? trackData.track : [];
-
-          const points = rawPoints.map((point) => {
-            const lat = parseCoordinate(point.latitude);
-            const lng = parseCoordinate(point.longitude);
-            const dist = getDistance(hkCoordinates.lat, hkCoordinates.lng, lat, lng);
-            return {
-              ...point,
-              lat: lat,
-              lng: lng,
-              dist: dist
-            };
-          }).filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
-
-          //console.log(JSON.stringify(points));
-
-          typhoonDataList.push({
-            ...trackData,
-            points: points,
-            color: colors[i % colors.length],
-          });
+          typhoonDataList.push(prepareTrack(trackData, colors[i % colors.length]));
         } catch (error) {
           console.error('Error fetching track for typhoon ' + typhoon.id + ':', error);
         }
@@ -341,9 +525,10 @@ title: HKO Warnings
         throw new Error('Typhoon tracks are not available yet.');
       }
 
-      trackContainer.innerHTML = createStatusHtml(typhoonDataList);
-      renderMap(typhoonDataList);
+      if (isHistoryMode()) return;
+      renderTyphoonTracks(typhoonDataList);
     } catch (error) {
+      if (isHistoryMode()) return;
       console.error(error);
       trackContainer.innerHTML = `<span style="color: #a00;">Unable to load typhoon data.</span> ${error.message}`;
       // remove map if an error occurred — do not display a blank map
