@@ -2,9 +2,6 @@ const sparkBaseUrl = "https://spark.cyrilng.com";
 //const sparkBaseUrl = "http://localhost:8080";
 
 function subscribeToHkoWarnings(eventHandlerFunction) {
-    if (location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname === "") {
-
-    }
     const evtSource = new EventSource(sparkBaseUrl + "/hko/warnings/stream");
     evtSource.onmessage = (event) => {
         const warnings = JSON.parse(event.data);
