@@ -4,10 +4,17 @@ const sparkBaseUrl = "https://spark.cyrilng.com";
 function subscribeToHkoWarnings(eventHandlerFunction) {
     const evtSource = new EventSource(sparkBaseUrl + "/hko/warnings/stream");
     evtSource.onmessage = (event) => {
-        const warnings = JSON.parse(event.data);
+        let warnings;
+        try {
+            warnings = JSON.parse(event.data);
+        } catch (err) {
+            console.error("Failed to parse HKO warnings:", err);
+            return;
+        }
+        window.dispatchEvent(new CustomEvent("spark:hko-warnings", { detail: warnings }));
         //console.log("Received HKO warnings:", warnings);
         const responseArray = [];
-        if (!warnings.hasOwnProperty("details")) {
+        if (!warnings || !Object.hasOwn(warnings, "details")) {
             eventHandlerFunction(["no active weather warnings"]);
             return;
         } else {
@@ -26,6 +33,7 @@ function subscribeToHkoWarnings(eventHandlerFunction) {
     };
     evtSource.onerror = (err) => {
         console.error("Failed to connect to stream: ", err);
+        window.dispatchEvent(new CustomEvent("spark:hko-warnings-error"));
         eventHandlerFunction(["link weather warnings"]);
     };
     return evtSource;

@@ -167,7 +167,7 @@ title: HKO Warnings
         const escapedText = escapeHtml(item).replace(/\n/g, '<br>');
         return `<li style="margin-bottom: 0.4rem;">${escapedText}</li>`;
       }).join('');
-      const timeText = detail.updateTime ? `<div style="font-size: 0.8rem; color: #ccc; margin-top: 0.35rem;">Updated ${formatWarningTime(detail.updateTime)}</div>` : '';
+      const timeText = detail.updateTime ? `<div style="font-size: 0.8rem; color: #ccc; margin-top: 0.35rem;">Updated ${escapeHtml(formatWarningTime(detail.updateTime))}</div>` : '';
 
       return `
         <div style="margin-bottom: 0.8rem; padding: 0.8rem; border: 1px solid #555; border-radius: 6px; background: #2a2a2a;">
@@ -181,26 +181,10 @@ title: HKO Warnings
 
   function attachHkoWarningsStream() {
     if (!warningsContainer) return;
-
-    try {
-      const source = new EventSource(typhoonApiHost + '/hko/warnings/stream');
-      source.onmessage = (event) => {
-        try {
-          const payload = JSON.parse(event.data);
-          renderHkoWarnings(payload);
-        } catch (error) {
-          console.error('Failed to parse HKO warnings payload:', error);
-          warningsContainer.innerHTML = '<div style="color: #a00;">Unable to load weather warnings.</div>';
-        }
-      };
-      source.onerror = (error) => {
-        console.error('HKO warnings stream error:', error);
-        warningsContainer.innerHTML = '<div style="color: #a00;">Unable to load weather warnings right now.</div>';
-      };
-    } catch (error) {
-      console.error('Failed to connect to HKO warnings stream:', error);
+    window.addEventListener('spark:hko-warnings', (event) => renderHkoWarnings(event.detail));
+    window.addEventListener('spark:hko-warnings-error', () => {
       warningsContainer.innerHTML = '<div style="color: #a00;">Unable to load weather warnings right now.</div>';
-    }
+    });
   }
 
   function createStatusHtml(typhoons) {
@@ -218,15 +202,15 @@ title: HKO Warnings
         : `${typhoon.bulletinTime} · Maximum wind speed: ${currentPoint?.maximumWind} · (${currentPoint?.latitude} ${currentPoint?.longitude})`;
       const lastUpdated = typhoon.isHistorical
         ? ''
-        : `<div style="font-size: 0.8rem; color: #ccc;">Last update: ${typhoon.bulletinTime || currentPoint?.time || 'N/A'}</div>`;
+        : `<div style="font-size: 0.8rem; color: #ccc;">Last update: ${escapeHtml(typhoon.bulletinTime || currentPoint?.time || 'N/A')}</div>`;
       return `
       <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #ddd;">
-        <div><strong style="color: ${typhoon.color};">● ${currentPoint?.intensity} ${typhoon.tropicalCycloneName}</strong></div>
-        <div style="font-size: 0.9rem;">${bulletinDetails}</div>
-        <div style="font-size: 0.85rem;">${distanceText}</div>
-        <div style="font-size: 0.85rem;">${bearingText}</div>
-        <div style="font-size: 0.85rem;">${movementText}</div>
-        <div style="font-size: 0.85rem;">${nearestText}</div>
+        <div><strong style="color: ${typhoon.color};">● ${escapeHtml(currentPoint?.intensity)} ${escapeHtml(typhoon.tropicalCycloneName)}</strong></div>
+        <div style="font-size: 0.9rem;">${escapeHtml(bulletinDetails)}</div>
+        <div style="font-size: 0.85rem;">${escapeHtml(distanceText)}</div>
+        <div style="font-size: 0.85rem;">${escapeHtml(bearingText)}</div>
+        <div style="font-size: 0.85rem;">${escapeHtml(movementText)}</div>
+        <div style="font-size: 0.85rem;">${escapeHtml(nearestText)}</div>
         ${lastUpdated}
       </div>
     `;
@@ -272,11 +256,11 @@ title: HKO Warnings
           fillOpacity: 0.8,
         }).addTo(map);
         marker.bindPopup(`
-        <strong>${typhoon.tropicalCycloneName}</strong><br>
-        ${point.time}<br>
-        ${point.intensity}<br>
-        ${point.maximumWind}<br>
-        ${point.dist.toFixed(0)}km (${point.latitude}, ${point.longitude})
+        <strong>${escapeHtml(typhoon.tropicalCycloneName)}</strong><br>
+        ${escapeHtml(point.time)}<br>
+        ${escapeHtml(point.intensity)}<br>
+        ${escapeHtml(point.maximumWind)}<br>
+        ${point.dist.toFixed(0)}km (${escapeHtml(point.latitude)}, ${escapeHtml(point.longitude)})
       `);
 
         if (point.timePeriod === "CURRENT") {
@@ -286,15 +270,15 @@ title: HKO Warnings
               iconSize: [20, 20]
             })
           }).addTo(map).bindPopup(`
-          <strong>${typhoon.tropicalCycloneName}</strong><br>
-          ${point.time}<br>
-          ${point.intensity}<br>
-          ${point.maximumWind}<br>
-          ${point.dist.toFixed(0)}km (${point.latitude}, ${point.longitude})
+          <strong>${escapeHtml(typhoon.tropicalCycloneName)}</strong><br>
+          ${escapeHtml(point.time)}<br>
+          ${escapeHtml(point.intensity)}<br>
+          ${escapeHtml(point.maximumWind)}<br>
+          ${point.dist.toFixed(0)}km (${escapeHtml(point.latitude)}, ${escapeHtml(point.longitude)})
       `);
           L.marker([point.lat, point.lng], {
             icon: L.divIcon({
-              html: typhoon.tropicalCycloneName,
+              html: escapeHtml(typhoon.tropicalCycloneName),
               className: 'typhoon-label',
               iconAnchor: [30, -20]
             })
@@ -313,7 +297,7 @@ title: HKO Warnings
         <strong>Hong Kong</strong><br>
         (${hkCoordinates.lat}, ${hkCoordinates.lng})
       `);
-    allBounds.concat([hkCoordinates.lat, hkCoordinates.lng]);
+    allBounds.push([hkCoordinates.lat, hkCoordinates.lng]);
     // center the map
     if (allBounds.length > 0) {
       const bounds = L.latLngBounds(allBounds);
@@ -509,20 +493,19 @@ title: HKO Warnings
       }
 
       const colors = ['#a00', '#f90', '#0a0', '#00a', '#a0a', '#0aa', '#fa0', '#a00'];
-      const typhoonDataList = [];
 
-      // Fetch track data for all typhoons
-      for (let i = 0; i < typhoons.length; i++) {
-        const typhoon = typhoons[i];
+      const trackResults = await Promise.all(typhoons.map(async (typhoon, index) => {
         try {
           const trackResp = await fetch(typhoonApiHost + '/typhoon-json/track/' + encodeURIComponent(typhoon.id), { credentials: 'same-origin' });
           if (!trackResp.ok) throw new Error('Failed to fetch typhoon track: ' + trackResp.status);
           const trackData = await trackResp.json();
-          typhoonDataList.push(prepareTrack(trackData, colors[i % colors.length]));
+          return prepareTrack(trackData, colors[index % colors.length]);
         } catch (error) {
           console.error('Error fetching track for typhoon ' + typhoon.id + ':', error);
+          return null;
         }
-      }
+      }));
+      const typhoonDataList = trackResults.filter(Boolean);
 
       if (typhoonDataList.length === 0) {
         throw new Error('Typhoon tracks are not available yet.');
@@ -530,10 +513,15 @@ title: HKO Warnings
 
       if (isHistoryMode()) return;
       renderTyphoonTracks(typhoonDataList);
+      if (typhoonDataList.length < typhoons.length) {
+        const notice = document.createElement('p');
+        notice.textContent = `${typhoons.length - typhoonDataList.length} active storm track(s) could not be loaded.`;
+        trackContainer.prepend(notice);
+      }
     } catch (error) {
       if (isHistoryMode()) return;
       console.error(error);
-      trackContainer.innerHTML = `<span style="color: #a00;">Unable to load typhoon data.</span> ${error.message}`;
+      trackContainer.innerHTML = `<span style="color: #a00;">Unable to load typhoon data.</span> ${escapeHtml(error.message)}`;
       // remove map if an error occurred — do not display a blank map
       removeMapContainer();
       await new Promise(r => setTimeout(r, Math.min(1000 * retryTimes++, 60000)));
@@ -543,9 +531,9 @@ title: HKO Warnings
 
   // document.addEventListener('DOMContentLoaded', loadTyphoon);
 
+  attachHkoWarningsStream();
   window.addEventListener("load", () => {
     // Runs only after images, frames, and styles are finished loading
-    attachHkoWarningsStream();
     loadTyphoon();
   });
 </script>
